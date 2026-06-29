@@ -1,0 +1,21 @@
+# Secretos — NUNCA subir
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Logs y temporales
+*.log
+*.zip
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

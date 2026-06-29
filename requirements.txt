@@ -1,0 +1,12 @@
+# ODL Demo — dependencias (app + dashboard + simulador)
+# Instala con:  pip install -r requirements.txt
+
+# API + dashboard + chat
+fastapi==0.136.1
+uvicorn==0.46.0
+pymongo[srv]==4.17.0
+pydantic==2.13.3
+dnspython==2.8.0
+
+# Simulador iSeries (opcional — solo si corres el simulador en vivo)
+confluent-kafka==2.14.0

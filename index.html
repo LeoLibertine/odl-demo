@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bancolombia — TFW · Operational Data Layer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { margin: 0; background: #E5E5E7; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ═══ BANCOLOMBIA BRAND SYSTEM ═══
+const B = {
+  black: "#1A1A1A", darkest: "#0D0D0D", dark: "#2C2C2C", dark2: "#3A3A3A",
+  white: "#FFFFFF", offWhite: "#F7F7F8",
+  yellow: "#FDDA24", yellowSoft: "#FFF8DC", yellowDark: "#E5C400",
+  coral: "#FF6B6B", mint: "#4ECDC4", sky: "#45B7D1",
+  violet: "#7C5CFC", rose: "#FF85A2", lime: "#A8E06C",
+  g100: "#F2F2F3", g200: "#E5E5E7", g300: "#D1D1D4", g400: "#A1A1A6",
+  g500: "#7C7C82", g600: "#5A5A60", g700: "#3E3E44",
+  up: "#00C48C", down: "#FF5A5F", info: "#45B7D1",
+};
+const FONT = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
+const MONO = "'JetBrains Mono', 'SF Mono', monospace";
+const API_DEFAULT = "http://localhost:8788";
+
+const I = {
+  wallet: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 7H3a2 2 0 00-2 2v9a2 2 0 002 2h18a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/><path d="M3 7V5a2 2 0 012-2h14a2 2 0 012 2v2"/></svg>,
+  list: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h10"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>,
+  search: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>,
+  doc: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>,
+  chev: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>,
+  aUp: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00C48C" strokeWidth="2.5"><path d="M12 19V5m-7 7l7-7 7 7"/></svg>,
+  aDown: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF5A5F" strokeWidth="2.5"><path d="M12 5v14m7-7l-7 7-7-7"/></svg>,
+  bolt: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+  ref: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>,
+  lock: <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+  star: <svg width="12" height="12" viewBox="0 0 24 24" fill="#FDDA24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
+  app: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></svg>,
+  web: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>,
+  atm: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M12 7v4m-3 0h6"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg>,
+  suc: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4M9 10h1M14 10h1M9 14h1M14 14h1"/></svg>,
+  neq: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+  play: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>,
+  check: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>,
+  pulse: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+};
+const chI = c => ({APP:I.app,WEB:I.web,ATM:I.atm,SUC:I.suc,NEQ:I.neq}[c]||I.app);
+const fmt = n => n==null?"$0":"$"+Math.round(n).toLocaleString("es-CO");
+const fD = d => { if(!d)return""; try{return new Date(d).toLocaleDateString("es-CO",{day:"numeric",month:"short"})}catch{return String(d).slice(0,10)}};
+const fT = h => h?h.substring(0,5):"";
+const sg = (o,...k) => { let c=o; for(const i of k){if(!c||typeof c!=="object")return null; c=c[i]} return c };
+
+function useApi(base) {
+  const [loading, setLoading] = useState(false);
+  const [ms, setMs] = useState(null);
+  const call = useCallback(async (path, opts = {}) => {
+    setLoading(true); setMs(null);
+    try {
+      const r = await fetch(`${base}${path}`, opts);
+      if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`Error ${r.status}`); }
+      const d = await r.json(); setMs(d._meta?.query_time_ms??d.query_time_ms??null); return d;
+    } finally { setLoading(false); }
+  }, [base]);
+  return { call, loading, ms };
+}
+
+function Pill({ms,label,dark}){
+  if(ms==null) return null;
+  return <span style={{display:"inline-flex",alignItems:"center",gap:4,background:dark?"rgba(253,218,36,0.15)":`${B.yellow}20`,border:`1px solid ${dark?"rgba(253,218,36,0.3)":B.yellow+"40"}`,borderRadius:100,padding:"3px 10px 3px 8px",fontSize:11,fontWeight:600,fontFamily:MONO,color:dark?B.yellow:B.dark}}>
+    <span style={{display:"flex",color:dark?B.yellow:B.yellowDark}}>{I.bolt}</span>
+    {label?`${label}: `:""}{ms}ms
+  </span>;
+}
+function Spin(){return <div style={{display:"flex",justifyContent:"center",padding:48}}><div style={{width:28,height:28,border:`2.5px solid ${B.g200}`,borderTopColor:B.black,borderRadius:"50%",animation:"bspin .7s linear infinite"}}/></div>}
+function Tag({children,active,onClick}){return <button onClick={onClick} style={{padding:"7px 16px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all .15s",border:active?`1.5px solid ${B.black}`:`1px solid ${B.g300}`,background:active?B.black:B.white,color:active?B.white:B.g600}}>{children}</button>}
+
+// ═══ TRANSACTION TYPES FOR SIMULATION ═══
+const TX_TYPES = [
+  { key: "NOMINA", label: "Nómina", icon: "💰", signo: "C" },
+  { key: "TRANSFERENCIA_RECIBIDA", label: "Transferencia", icon: "↗️", signo: "C" },
+  { key: "RETIRO_ATM", label: "Retiro ATM", icon: "🏧", signo: "D" },
+  { key: "COMPRA_WEB", label: "Compra Web", icon: "🛒", signo: "D" },
+  { key: "PAGO_SERVICIO", label: "Pago Servicios", icon: "📄", signo: "D" },
+];
+
+// ═══ CHRONOMETER COMPONENT ═══
+function Chrono({ running, startTime, finalMs }) {
+  const [elapsed, setElapsed] = useState(0);
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    if (running && startTime) {
+      const tick = () => {
+        setElapsed(Date.now() - startTime);
+        frameRef.current = requestAnimationFrame(tick);
+      };
+      frameRef.current = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(frameRef.current);
+    }
+    if (finalMs != null) setElapsed(finalMs);
+  }, [running, startTime, finalMs]);
+
+  const display = running ? elapsed : (finalMs ?? elapsed);
+  const secs = Math.floor(display / 1000);
+  const ms = display % 1000;
+
+  return (
+    <div style={{ fontFamily: MONO, fontSize: running ? 32 : 36, fontWeight: 800, letterSpacing: -1.5, color: finalMs != null ? B.up : B.white, textAlign: "center", lineHeight: 1, transition: "color 0.3s" }}>
+      {secs > 0 && <span>{secs}.</span>}
+      <span>{String(Math.floor(ms)).padStart(secs > 0 ? 3 : 1, "0")}</span>
+      <span style={{ fontSize: 14, fontWeight: 500, opacity: 0.6, marginLeft: 2 }}>ms</span>
+    </div>
+  );
+}
+
+// ═══ PIPELINE STAGE INDICATOR ═══
+function PipelineStages({ stage }) {
+  const stages = [
+    { id: "send", label: "Enviando", sub: "3 fragmentos CDC" },
+    { id: "kafka", label: "Kafka", sub: "Topic CDC" },
+    { id: "asp", label: "ASP", sub: "Ensamblando" },
+    { id: "odl", label: "ODL", sub: "MongoDB" },
+    { id: "done", label: "Listo", sub: "Confirmado" },
+  ];
+  const idx = stages.findIndex(s => s.id === stage);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, padding: "0 8px" }}>
+      {stages.map((s, i) => {
+        const active = i <= idx;
+        const current = i === idx;
+        return (
+          <div key={s.id} style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 48 }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: active ? (current ? B.yellow : `${B.up}`) : "rgba(255,255,255,0.1)",
+                border: current ? `2px solid ${B.yellow}` : "2px solid transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.3s", fontSize: 10, fontWeight: 700,
+                color: active ? B.darkest : "rgba(255,255,255,0.3)",
+                animation: current ? "bpulse 1.2s ease-in-out infinite" : "none",
+              }}>
+                {active && i < idx ? "✓" : i + 1}
+              </div>
+              <div style={{ fontSize: 8, fontWeight: 600, color: active ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.3, textAlign: "center", lineHeight: 1.2 }}>
+                {s.label}
+              </div>
+            </div>
+            {i < stages.length - 1 && (
+              <div style={{ width: 16, height: 2, background: i < idx ? B.up : "rgba(255,255,255,0.1)", borderRadius: 1, transition: "background 0.3s", marginBottom: 12 }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══ READ-YOUR-WRITES SIMULATION PANEL ═══
+function SimulationPanel({ cuenta, apiBase, onSaldoUpdate }) {
+  const [state, setState] = useState("idle"); // idle | selecting | sending | polling | done | error
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [finalMs, setFinalMs] = useState(null);
+  const [pipelineStage, setPipelineStage] = useState("send");
+  const [result, setResult] = useState(null);
+  const [saldoAnterior, setSaldoAnterior] = useState(null);
+  const [error, setError] = useState(null);
+  const pollRef = useRef(null);
+  const pollCount = useRef(0);
+
+  const reset = () => {
+    setState("idle");
+    setSelectedTx(null);
+    setStartTime(null);
+    setFinalMs(null);
+    setPipelineStage("send");
+    setResult(null);
+    setSaldoAnterior(null);
+    setError(null);
+    pollCount.current = 0;
+    if (pollRef.current) clearInterval(pollRef.current);
+  };
+
+  const startSimulation = async (txType) => {
+    setSelectedTx(txType);
+    setState("sending");
+    setError(null);
+    const t0 = Date.now();
+    setStartTime(t0);
+    setPipelineStage("send");
+
+    try {
+      // 1. Get current saldo first
+      const saldoRes = await fetch(`${apiBase}/api/v1/cuentas/${cuenta}/saldo`);
+      const saldoData = await saldoRes.json();
+      const saldoPrev = saldoData?.saldo?.actual || 0;
+      setSaldoAnterior(saldoPrev);
+
+      // 2. POST to simulate transaction
+      setPipelineStage("kafka");
+      const res = await fetch(`${apiBase}/api/v1/cuentas/${cuenta}/simular-movimiento`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo: txType.key }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      setResult(data);
+
+      // 3. Start polling for saldo change
+      setState("polling");
+      setPipelineStage("asp");
+      pollCount.current = 0;
+
+      const expectedSaldo = data.saldo_esperado;
+      const demoId = data.demo_id;
+
+      pollRef.current = setInterval(async () => {
+        pollCount.current += 1;
+
+        // Update pipeline stage based on elapsed time
+        const elapsed = Date.now() - t0;
+        if (elapsed > 300 && elapsed < 1500) setPipelineStage("asp");
+        if (elapsed > 1500) setPipelineStage("odl");
+
+        try {
+          const checkRes = await fetch(
+            `${apiBase}/api/v1/cuentas/${cuenta}/verificar-cambio?saldo_anterior=${saldoPrev}${demoId ? `&demo_id=${demoId}` : ""}`
+          );
+          const checkData = await checkRes.json();
+
+          if (checkData.cambio_detectado) {
+            clearInterval(pollRef.current);
+            const totalMs = Date.now() - t0;
+            setFinalMs(totalMs);
+            setPipelineStage("done");
+            setState("done");
+            setResult(prev => ({
+              ...prev,
+              saldo_nuevo_real: checkData.saldo_actual,
+              latencias_asp: checkData.latencias,
+              polls: pollCount.current,
+              total_e2e_ms: totalMs,
+            }));
+            if (onSaldoUpdate) onSaldoUpdate();
+          }
+
+          // Timeout after 30 seconds
+          if (pollCount.current > 100) {
+            clearInterval(pollRef.current);
+            setFinalMs(Date.now() - t0);
+            setPipelineStage("odl");
+            setState("done");
+            setResult(prev => ({
+              ...prev,
+              timeout: true,
+              polls: pollCount.current,
+              total_e2e_ms: Date.now() - t0,
+            }));
+          }
+        } catch {
+          // Ignore polling errors, keep trying
+        }
+      }, 300);
+
+    } catch (e) {
+      setState("error");
+      setError(e.message);
+      setFinalMs(Date.now() - t0);
+    }
+  };
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // ── IDLE STATE: Show trigger button ──
+  if (state === "idle") {
+    return (
+      <div style={{ margin: "0 0 16px", borderRadius: 20, overflow: "hidden", border: `1px solid rgba(253,218,36,0.2)` }}>
+        <div style={{ background: `linear-gradient(135deg, ${B.darkest}, #1a1520)`, padding: "20px 20px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ display: "flex", color: B.yellow }}>{I.pulse}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: B.white, letterSpacing: -0.2 }}>Read-Your-Writes</span>
+            <span style={{ fontSize: 9, fontWeight: 600, color: B.yellow, background: "rgba(253,218,36,0.15)", padding: "2px 8px", borderRadius: 100, letterSpacing: 0.5, textTransform: "uppercase" }}>LIVE</span>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginBottom: 16 }}>
+            Dispara una transacción real que recorre iSeries → Kafka → ASP → MongoDB. Mide la latencia end-to-end en tu dispositivo.
+          </div>
+          <button
+            onClick={() => setState("selecting")}
+            style={{
+              width: "100%", padding: "14px 0", borderRadius: 14,
+              border: "none", background: B.yellow, color: B.darkest,
+              fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: FONT,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              transition: "transform 0.1s",
+            }}
+            onMouseDown={e => e.currentTarget.style.transform = "scale(0.97)"}
+            onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
+          >
+            <span style={{ display: "flex" }}>{I.play}</span>
+            Simular Transacción
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SELECTING STATE: Choose transaction type ──
+  if (state === "selecting") {
+    return (
+      <div style={{ margin: "0 0 16px", borderRadius: 20, overflow: "hidden", border: `1px solid rgba(253,218,36,0.2)` }}>
+        <div style={{ background: `linear-gradient(135deg, ${B.darkest}, #1a1520)`, padding: "20px 20px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: B.white }}>Tipo de transacción</span>
+            <button onClick={reset} style={{ background: "none", border: "none", color: B.g400, fontSize: 11, cursor: "pointer", fontFamily: FONT }}>Cancelar</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {TX_TYPES.map(tx => (
+              <button
+                key={tx.key}
+                onClick={() => startSimulation(tx)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                  borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.04)", color: B.white,
+                  cursor: "pointer", fontFamily: FONT, textAlign: "left",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(253,218,36,0.1)"; e.currentTarget.style.borderColor = "rgba(253,218,36,0.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+              >
+                <span style={{ fontSize: 20, width: 32, textAlign: "center" }}>{tx.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{tx.label}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+                    {tx.signo === "C" ? "Crédito (+)" : "Débito (−)"}
+                  </div>
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.2)" }}>{I.chev}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── ACTIVE STATES: Sending, Polling, Done, Error ──
+  const isDone = state === "done";
+  const isError = state === "error";
+  const isActive = state === "sending" || state === "polling";
+
+  return (
+    <div style={{ margin: "0 0 16px", borderRadius: 20, overflow: "hidden", border: `1px solid ${isDone && !result?.timeout ? B.up + "40" : isError ? B.down + "40" : "rgba(253,218,36,0.2)"}` }}>
+      <div style={{ background: `linear-gradient(135deg, ${B.darkest}, ${isDone && !result?.timeout ? "#0a1a12" : isError ? "#1a0a0a" : "#1a1520"})`, padding: "20px 20px 18px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16 }}>{selectedTx?.icon}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: B.white }}>{selectedTx?.label}</span>
+            {result?.transaccion?.monto_formateado && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: selectedTx?.signo === "C" ? B.up : B.down, fontFamily: MONO }}>
+                {selectedTx?.signo === "C" ? "+" : "−"}{result.transaccion.monto_formateado}
+              </span>
+            )}
+          </div>
+          {(isDone || isError) && (
+            <button onClick={reset} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: FONT }}>
+              Reintentar
+            </button>
+          )}
+        </div>
+
+        {/* Chronometer */}
+        <div style={{ textAlign: "center", padding: "12px 0 16px", position: "relative" }}>
+          {isActive && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <div style={{ width: 100, height: 100, borderRadius: "50%", border: `2px solid ${B.yellow}15`, animation: "bpulse 2s ease-in-out infinite" }} />
+            </div>
+          )}
+          <Chrono running={isActive} startTime={startTime} finalMs={finalMs} />
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 6, fontFamily: MONO }}>
+            {isActive ? "Esperando confirmación del ODL..." :
+             isDone && !result?.timeout ? "✓ Transacción confirmada end-to-end" :
+             isDone && result?.timeout ? "⏱ Timeout — verificar pipeline" :
+             isError ? "✕ Error en la simulación" :
+             "Latencia end-to-end"}
+          </div>
+        </div>
+
+        {/* Pipeline Stages */}
+        {!isError && <PipelineStages stage={pipelineStage} />}
+
+        {/* Error Message */}
+        {isError && (
+          <div style={{ background: "rgba(255,90,95,0.1)", border: "1px solid rgba(255,90,95,0.2)", borderRadius: 12, padding: "12px 14px", marginTop: 12 }}>
+            <div style={{ fontSize: 11, color: B.down, fontWeight: 600, marginBottom: 4 }}>Error</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>{error}</div>
+          </div>
+        )}
+
+        {/* Success Result */}
+        {isDone && !result?.timeout && result && (
+          <div style={{ marginTop: 14 }}>
+            {/* Saldo change animation */}
+            <div style={{ background: "rgba(0,196,140,0.08)", border: "1px solid rgba(0,196,140,0.2)", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 10, color: B.up, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Saldo actualizado</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: B.up, marginTop: 4, fontFamily: MONO, letterSpacing: -1 }}>
+                    {fmt(result.saldo_nuevo_real || result.saldo_esperado)}
+                  </div>
+                </div>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(0,196,140,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: B.up, animation: "bpop 0.5s ease-out" }}>
+                  {I.check}
+                </div>
+              </div>
+              {saldoAnterior != null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: MONO }}>
+                  <span>{fmt(saldoAnterior)}</span>
+                  <span style={{ color: B.yellow }}>→</span>
+                  <span style={{ color: B.up, fontWeight: 600 }}>{fmt(result.saldo_nuevo_real || result.saldo_esperado)}</span>
+                  <span style={{ marginLeft: "auto", color: selectedTx?.signo === "C" ? B.up : B.down, fontWeight: 600 }}>
+                    {selectedTx?.signo === "C" ? "+" : "−"}{fmt(result?.transaccion?.monto)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Pipeline metrics */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+              {[
+                { l: "E2E Total", v: `${result.total_e2e_ms}ms`, c: B.yellow },
+                { l: "Polls", v: result.polls || "—", c: B.white },
+                { l: "Pipeline", v: result.pipeline?.modo === "kafka" ? "Kafka→ASP" : "Direct", c: B.info },
+              ].map((m, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "10px 10px", textAlign: "center" }}>
+                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{m.l}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: m.c, marginTop: 3, fontFamily: MONO }}>{m.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Polling status */}
+        {isActive && (
+          <div style={{ textAlign: "center", marginTop: 12, fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: MONO }}>
+            Polling cada 300ms · #{pollCount.current} verificaciones
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ═══ LOGIN ═══
+function Login({onLogin,apiBase,setApiBase}){
+  const [cuentas,setCuentas]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState(null);
+  const [showApi,setShowApi]=useState(false);
+  const [tmp,setTmp]=useState(apiBase);
+  const load=async()=>{setLoading(true);setErr(null);try{const r=await fetch(`${apiBase}/api/v1/odl/cuentas-ejemplo?n=6`);const d=await r.json();setCuentas(d.cuentas||[]);}catch{setErr("No se pudo conectar al API del ODL")}setLoading(false);};
+  useEffect(()=>{load();},[apiBase]);
+
+  return <div style={{minHeight:"100vh",background:B.darkest,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:FONT}}>
+    <div style={{textAlign:"center",marginBottom:48}}>
+      <div style={{fontSize:32,fontWeight:800,color:B.white,letterSpacing:-0.5,marginBottom:8}}>Bancolombia</div>
+      <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(253,218,36,0.12)",border:"1px solid rgba(253,218,36,0.25)",borderRadius:100,padding:"5px 14px",fontSize:11,fontWeight:600,color:B.yellow,letterSpacing:0.5,textTransform:"uppercase"}}>
+        {I.bolt} TFW · Operational Data Layer
+      </div>
+    </div>
+    <div style={{background:B.white,borderRadius:20,padding:28,width:"100%",maxWidth:380,boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}}>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:17,fontWeight:700,color:B.black,letterSpacing:-0.3}}>Selecciona una cuenta</div>
+        <div style={{fontSize:13,color:B.g500,marginTop:4}}>Datos en vivo desde MongoDB Atlas ODL</div>
+      </div>
+      {err&&<div style={{background:"#FFF5F5",border:"1px solid #FFE0E0",borderRadius:12,padding:14,fontSize:12,color:B.down,marginBottom:16,lineHeight:1.5}}>
+        {err}<button onClick={()=>setShowApi(true)} style={{display:"block",marginTop:8,background:"none",border:"none",color:B.info,fontSize:12,fontWeight:600,cursor:"pointer",padding:0}}>Configurar URL del API →</button>
+      </div>}
+      {showApi&&<div style={{marginBottom:16}}>
+        <input value={tmp} onChange={e=>setTmp(e.target.value)} placeholder="http://localhost:8788" style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${B.g300}`,fontSize:13,fontFamily:MONO,boxSizing:"border-box",marginBottom:8,outline:"none"}}/>
+        <button onClick={()=>{setApiBase(tmp);setShowApi(false)}} style={{width:"100%",padding:"11px 0",borderRadius:10,border:"none",background:B.black,color:B.white,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>Conectar</button>
+      </div>}
+      {loading?<Spin/>:<div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {cuentas.map((c,i)=><button key={i} onClick={()=>onLogin(c.numero)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:B.offWhite,border:"1px solid transparent",borderRadius:14,padding:"15px 16px",cursor:"pointer",transition:"all .15s",textAlign:"left",fontFamily:FONT}} onMouseEnter={e=>{e.currentTarget.style.borderColor=B.black;e.currentTarget.style.background=B.white}} onMouseLeave={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background=B.offWhite}}>
+          <div><div style={{fontSize:15,fontWeight:700,color:B.black,fontFamily:MONO,letterSpacing:-0.3}}>{c.numero}</div><div style={{fontSize:11,color:B.g500,marginTop:3,fontWeight:500}}>{c.tipo} · {c.sucursal}</div></div>
+          <div style={{color:B.g400}}>{I.chev}</div>
+        </button>)}
+      </div>}
+      {!loading&&!err&&<button onClick={load} style={{width:"100%",marginTop:10,padding:"10px 0",borderRadius:10,border:`1px dashed ${B.g300}`,background:"none",color:B.g500,fontSize:12,cursor:"pointer",fontFamily:FONT,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{display:"flex"}}>{I.ref}</span> Otras cuentas</button>}
+      {!showApi&&!err&&<button onClick={()=>setShowApi(true)} style={{width:"100%",marginTop:8,background:"none",border:"none",color:B.g400,fontSize:11,cursor:"pointer",fontFamily:MONO}}>⚙ {apiBase}</button>}
+    </div>
+    <div style={{marginTop:32,textAlign:"center"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:3,marginBottom:8}}>
+        {[B.yellow,B.coral,B.mint,B.sky,B.violet,B.rose].map((c,i)=><div key={i} style={{width:20,height:3,borderRadius:2,background:c,opacity:0.7}}/>)}
+      </div>
+      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",letterSpacing:0.3}}>Powered by MongoDB Atlas · Datos sintéticos para validación técnica</div>
+    </div>
+  </div>;
+}
+
+// ═══ SALDO (with Read-Your-Writes) ═══
+function TabSaldo({cuenta,api,apiBase}){
+  const [d,setD]=useState(null);
+  const [refreshKey,setRefreshKey]=useState(0);
+  const load=async()=>{try{setD(await api.call(`/api/v1/cuentas/${cuenta}/saldo`))}catch{}};
+  useEffect(()=>{load()},[cuenta,refreshKey]);
+  if(api.loading&&!d) return <Spin/>;
+  if(!d) return null;
+  const saldo=d.saldo?.actual||0, um=d.ultimo_movimiento||{};
+  return <div style={{padding:"0 20px 24px"}}>
+    {/* ── Read-Your-Writes Panel ── */}
+    <SimulationPanel cuenta={cuenta} apiBase={apiBase} onSaldoUpdate={()=>setRefreshKey(k=>k+1)} />
+
+    {/* ── Balance Card ── */}
+    <div style={{background:B.darkest,borderRadius:20,padding:"26px 24px 22px",color:B.white,marginBottom:20,position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:0,right:0,width:120,height:120,opacity:0.06}}>
+        <div style={{position:"absolute",top:20,right:-20,width:100,height:3,background:B.yellow,borderRadius:2,transform:"rotate(-35deg)"}}/>
+        <div style={{position:"absolute",top:40,right:-10,width:80,height:3,background:B.coral,borderRadius:2,transform:"rotate(-35deg)"}}/>
+        <div style={{position:"absolute",top:60,right:0,width:60,height:3,background:B.mint,borderRadius:2,transform:"rotate(-35deg)"}}/>
+      </div>
+      <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:6}}>Saldo disponible</div>
+      <div style={{fontSize:36,fontWeight:800,letterSpacing:-1.5,lineHeight:1.1,marginBottom:2}}>{fmt(saldo)}</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",fontWeight:500,marginBottom:18}}>COP · Pesos Colombianos</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,paddingTop:16,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+        {[{l:"Tipo",v:d.cuenta?.tipo},{l:"Sucursal",v:d.cuenta?.sucursal},{l:"Cuenta",v:cuenta?.slice(-6),m:true}].map((x,i)=><div key={i}><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5}}>{x.l}</div><div style={{fontSize:13,fontWeight:600,marginTop:3,fontFamily:x.m?MONO:FONT}}>{x.v}</div></div>)}
+      </div>
+    </div>
+    <div style={{display:"flex",justifyContent:"center",marginBottom:20}}><Pill ms={api.ms} label="MongoDB ODL"/></div>
+    <div style={{fontSize:13,fontWeight:700,color:B.black,marginBottom:10,letterSpacing:-0.2}}>Último movimiento</div>
+    <div style={{background:B.white,borderRadius:16,padding:"16px 18px",border:`1px solid ${B.g200}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:12,background:B.offWhite,display:"flex",alignItems:"center",justifyContent:"center",color:B.g600}}>{chI("APP")}</div>
+        <div><div style={{fontSize:14,fontWeight:600,color:B.black}}>{um.tipo||"—"}</div><div style={{fontSize:12,color:B.g500,marginTop:1}}>{um.canal} · {fD(um.fecha)}</div></div>
+      </div>
+      <div style={{fontSize:16,fontWeight:700,color:B.black}}>{fmt(um.monto)}</div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:16}}>
+      {[{l:"SLA Requerido",v:"< 400ms",a:false},{l:"Respuesta ODL",v:`${api.ms||"—"}ms`,a:true},{l:"Plan de Query",v:"IXSCAN",a:false},{l:"vs. Legacy",v:"80× más rápido",a:true}].map((x,i)=><div key={i} style={{background:x.a?B.yellowSoft:B.offWhite,borderRadius:14,padding:"14px 16px",border:x.a?`1px solid ${B.yellow}30`:`1px solid ${B.g200}`}}>
+        <div style={{fontSize:10,color:B.g500,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{x.l}</div>
+        <div style={{fontSize:18,fontWeight:800,color:x.a?B.dark:B.black,marginTop:5,letterSpacing:-0.5}}>{x.v}</div>
+      </div>)}
+    </div>
+    <button onClick={()=>setRefreshKey(k=>k+1)} style={{width:"100%",marginTop:14,padding:"13px 0",borderRadius:14,border:"none",background:B.black,color:B.white,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+      <span style={{display:"flex"}}>{I.ref}</span> Actualizar Saldo
+    </button>
+  </div>;
+}
+
+// ═══ MOVIMIENTOS ═══
+function TabMov({cuenta,api}){
+  const [d,setD]=useState(null);const [meses,setMeses]=useState(5);const [canal,setCanal]=useState(null);const [page,setPage]=useState(1);
+  const load=async()=>{try{let p=`/api/v1/cuentas/${cuenta}/movimientos?meses=${meses}&page=${page}&size=12`;if(canal)p+=`&canal=${canal}`;setD(await api.call(p))}catch{}};
+  useEffect(()=>{load()},[cuenta,meses,canal,page]);
+  if(api.loading&&!d) return <Spin/>;
+  if(!d) return null;
+  const movs=d.movimientos||[];
+  return <div style={{padding:"0 20px 24px"}}>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+      {[1,3,5,6,12].map(m=><Tag key={m} active={meses===m} onClick={()=>{setMeses(m);setPage(1)}}>{m}m</Tag>)}
+    </div>
+    <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
+      <Tag active={!canal} onClick={()=>{setCanal(null);setPage(1)}}>Todos</Tag>
+      {["APP","WEB","ATM","SUC","NEQ"].map(c=><Tag key={c} active={canal===c} onClick={()=>{setCanal(c);setPage(1)}}>{c}</Tag>)}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <Pill ms={api.ms} label="Query"/>
+      <span style={{fontSize:11,color:B.g500}}>{d.total_movimientos||0} movimientos</span>
+    </div>
+    {movs.map((m,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",borderBottom:`1px solid ${B.g100}`}}>
+      <div style={{width:36,height:36,borderRadius:10,flexShrink:0,background:m.signo==="C"?`${B.up}12`:`${B.down}10`,color:m.signo==="C"?B.up:B.down,display:"flex",alignItems:"center",justifyContent:"center"}}>{chI(m.canal?.codigo)}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:B.black}}>{m.tipo}</div>
+        <div style={{fontSize:11,color:B.g500,marginTop:1}}>{m.canal?.nombre} · {fD(m.fecha)} {fT(m.hora)}</div>
+      </div>
+      <div style={{textAlign:"right",flexShrink:0}}>
+        <div style={{fontSize:14,fontWeight:700,color:m.signo==="C"?B.up:B.black}}>{m.signo==="C"?"+":"−"}{fmt(m.monto)}</div>
+        <div style={{fontSize:10,color:B.g400,fontFamily:MONO}}>→ {fmt(m.saldo)}</div>
+      </div>
+    </div>)}
+    {d.paginacion&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14}}>
+      <button disabled={page<=1} onClick={()=>setPage(p=>p-1)} style={{padding:"8px 16px",borderRadius:10,border:`1px solid ${B.g300}`,background:B.white,fontSize:12,fontWeight:600,cursor:page<=1?"default":"pointer",opacity:page<=1?0.4:1,fontFamily:FONT}}>← Anterior</button>
+      <span style={{fontSize:11,color:B.g500,fontFamily:MONO}}>{page} / {d.paginacion?.total_paginas||1}</span>
+      <button disabled={page>=(d.paginacion?.total_paginas||1)} onClick={()=>setPage(p=>p+1)} style={{padding:"8px 16px",borderRadius:10,border:`1px solid ${B.g300}`,background:B.white,fontSize:12,fontWeight:600,cursor:page>=(d.paginacion?.total_paginas||1)?"default":"pointer",opacity:page>=(d.paginacion?.total_paginas||1)?0.4:1,fontFamily:FONT}}>Siguiente →</button>
+    </div>}
+  </div>;
+}
+
+// ═══ BÚSQUEDA ═══
+function TabSearch({api}){
+  const [q,setQ]=useState("");const [r,setR]=useState(null);
+  const buscar=async()=>{if(!q.trim())return;try{setR(await api.call(`/api/v1/busqueda/texto?q=${encodeURIComponent(q)}`))}catch{}};
+  const sugerencias=["Nómina APP","Retiro ATM","Transferencia WEB","Compra Sucursal","Pago servicios"];
+  return <div style={{padding:"0 20px 24px"}}>
+    <div style={{position:"relative",marginBottom:14}}>
+      <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&buscar()} placeholder="Buscar en movimientos..." style={{width:"100%",padding:"14px 48px 14px 16px",borderRadius:14,border:`1px solid ${B.g300}`,fontSize:14,fontFamily:FONT,boxSizing:"border-box",outline:"none",background:B.white}}/>
+      <button onClick={buscar} style={{position:"absolute",right:6,top:6,width:36,height:36,borderRadius:10,border:"none",background:B.black,color:B.white,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{I.search}</button>
+    </div>
+    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+      {sugerencias.map(s=><button key={s} onClick={()=>{setQ(s);setTimeout(()=>{},50)}} style={{padding:"6px 12px",borderRadius:100,fontSize:11,fontWeight:500,border:`1px solid ${B.g200}`,background:B.white,color:B.g600,cursor:"pointer",fontFamily:FONT}}>{s}</button>)}
+    </div>
+    <div style={{background:`${B.yellow}12`,border:`1px solid ${B.yellow}25`,borderRadius:12,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
+      <span style={{display:"flex",color:B.yellowDark}}>{I.star}</span>
+      <span style={{fontSize:11,color:B.g600,lineHeight:1.4}}>Capacidad exclusiva del ODL — el iSeries no puede ofrecer búsqueda de texto libre</span>
+    </div>
+    {api.loading?<Spin/>:r&&<>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><Pill ms={api.ms} label={r.motor?.includes("Atlas")?"Atlas Search":"Regex"}/><span style={{fontSize:11,color:B.g500}}>{r.resultados} resultados</span></div>
+      {(r.movimientos||[]).map((m,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",borderBottom:`1px solid ${B.g100}`}}>
+        <div style={{width:36,height:36,borderRadius:10,flexShrink:0,background:m.signo==="C"?`${B.up}12`:`${B.down}10`,color:m.signo==="C"?B.up:B.down,display:"flex",alignItems:"center",justifyContent:"center"}}>{chI(m.canal?.codigo)}</div>
+        <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,color:B.black}}>{m.tipo}</div><div style={{fontSize:11,color:B.g500,marginTop:1}}><span style={{fontFamily:MONO}}>{sg(m,"cuenta","numero")||""}</span> · {m.canal?.nombre} · {fD(m.fecha)}</div>{m.relevancia!=null&&<div style={{fontSize:10,color:B.yellowDark,fontWeight:600,marginTop:2}}>★ Relevancia: {m.relevancia}</div>}</div>
+        <div style={{fontSize:13,fontWeight:700,color:m.signo==="C"?B.up:B.black,flexShrink:0}}>{fmt(m.monto)}</div>
+      </div>)}
+    </>}
+  </div>;
+}
+
+// ═══ ESTADO DE CUENTA ═══
+function TabEstado({cuenta,api}){
+  const [d,setD]=useState(null);const [meses,setMeses]=useState(1);
+  const load=async()=>{try{const r=await api.call(`/api/v1/cuentas/${cuenta}/estado-cuenta?meses=${meses}`);setD(r.estado_cuenta)}catch{}};
+  useEffect(()=>{load()},[cuenta,meses]);
+  return <div style={{padding:"0 20px 24px"}}>
+    <div style={{display:"flex",gap:6,marginBottom:16}}>{[1,3,5].map(m=><Tag key={m} active={meses===m} onClick={()=>setMeses(m)}>{m} {m===1?"mes":"meses"}</Tag>)}</div>
+    {api.loading?<Spin/>:d&&<>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:16}}><Pill ms={api.ms} label="Aggregation"/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+        <div style={{background:`${B.up}0C`,borderRadius:16,padding:"16px 18px"}}><div style={{fontSize:10,color:B.up,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5}}>Créditos</div><div style={{fontSize:22,fontWeight:800,color:B.up,marginTop:6,letterSpacing:-1}}>{fmt(d.resumen?.total_creditos)}</div></div>
+        <div style={{background:`${B.down}0C`,borderRadius:16,padding:"16px 18px"}}><div style={{fontSize:10,color:B.down,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5}}>Débitos</div><div style={{fontSize:22,fontWeight:800,color:B.down,marginTop:6,letterSpacing:-1}}>{fmt(d.resumen?.total_debitos)}</div></div>
+      </div>
+      <div style={{background:B.darkest,borderRadius:16,padding:"18px 20px",color:B.white,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.4)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Saldo Inicial</div><div style={{fontSize:18,fontWeight:700,marginTop:4}}>{fmt(d.resumen?.saldo_inicial)}</div></div>
+          <div style={{fontSize:20,color:B.yellow}}>→</div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:10,color:B.yellow,fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Saldo Final</div><div style={{fontSize:18,fontWeight:700,marginTop:4,color:B.yellow}}>{fmt(d.resumen?.saldo_final)}</div></div>
+        </div>
+      </div>
+      <div style={{background:B.white,borderRadius:16,padding:"16px 18px",border:`1px solid ${B.g200}`,marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:B.black,marginBottom:12,letterSpacing:-0.2}}>Resumen del período</div>
+        {[["Transacciones",d.resumen?.num_transacciones?.toLocaleString()],["Canales",(d.resumen?.canales_usados||[]).join(", ")],["Período",`${fD(d.periodo?.desde)} — ${fD(d.periodo?.hasta)}`],["Mostrados",`${d.movimientos_mostrados} de ${d.total_movimientos_periodo}`]].map(([l,v],i)=>
+          <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<3?`1px solid ${B.g100}`:"none",fontSize:12}}><span style={{color:B.g500}}>{l}</span><span style={{fontWeight:600,color:B.black}}>{v}</span></div>
+        )}
+      </div>
+      <div style={{fontSize:13,fontWeight:700,color:B.black,marginBottom:10,letterSpacing:-0.2}}>Movimientos</div>
+      {(d.movimientos||[]).slice(0,15).map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${B.g100}`,fontSize:12}}>
+        <div><div style={{fontWeight:600,color:B.black}}>{m.tipo}</div><div style={{color:B.g500,marginTop:2,fontSize:11}}>{m.canal} · {fD(m.fecha)}</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:m.signo==="C"?B.up:B.black}}>{m.signo==="C"?"+":"−"}{fmt(m.monto)}</div><div style={{color:B.g400,fontSize:10,fontFamily:MONO}}>→ {fmt(m.saldo)}</div></div>
+      </div>)}
+    </>}
+  </div>;
+}
+
+// ═══ MAIN ═══
+function App(){
+  const [apiBase,setApiBase]=useState(API_DEFAULT);
+  const [cuenta,setCuenta]=useState(null);
+  const [tab,setTab]=useState("saldo");
+  const api=useApi(apiBase);
+  if(!cuenta) return <Login onLogin={setCuenta} apiBase={apiBase} setApiBase={setApiBase}/>;
+  const tabs=[{id:"saldo",label:"Saldo",icon:I.wallet},{id:"mov",label:"Movimientos",icon:I.list},{id:"search",label:"Buscar",icon:I.search},{id:"estado",label:"Extracto",icon:I.doc}];
+  return <div style={{maxWidth:430,margin:"0 auto",minHeight:"100vh",background:B.offWhite,fontFamily:FONT,display:"flex",flexDirection:"column",boxShadow:"0 0 80px rgba(0,0,0,0.06)"}}>
+    <div style={{background:B.darkest,color:B.white}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 20px 0",fontSize:10,color:"rgba(255,255,255,0.4)"}}>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>{I.lock} ODL Demo</span>
+        <Pill ms={api.ms} dark/>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 20px 16px"}}>
+        <div><div style={{fontSize:20,fontWeight:800,letterSpacing:-0.5}}>Bancolombia</div><div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontFamily:MONO,marginTop:2}}>{cuenta}</div></div>
+        <button onClick={()=>setCuenta(null)} style={{padding:"7px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.7)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>Salir</button>
+      </div>
+    </div>
+    <div style={{flex:1,overflowY:"auto",paddingTop:16}}>
+      {tab==="saldo"&&<TabSaldo cuenta={cuenta} api={api} apiBase={apiBase}/>}
+      {tab==="mov"&&<TabMov cuenta={cuenta} api={api}/>}
+      {tab==="search"&&<TabSearch api={api}/>}
+      {tab==="estado"&&<TabEstado cuenta={cuenta} api={api}/>}
+    </div>
+    <div style={{display:"flex",borderTop:`1px solid ${B.g200}`,background:B.white,padding:"4px 0 env(safe-area-inset-bottom, 6px)"}}>
+      {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"9px 0",border:"none",background:"none",cursor:"pointer",transition:"color .15s",color:tab===t.id?B.black:B.g400}}>
+        <span style={{display:"flex",transform:tab===t.id?"scale(1.1)":"scale(1)",transition:"transform .15s"}}>{t.icon}</span>
+        <span style={{fontSize:10,fontWeight:tab===t.id?700:500,fontFamily:FONT}}>{t.label}</span>
+        {tab===t.id&&<div style={{width:4,height:4,borderRadius:2,background:B.yellow,marginTop:-1}}/>}
+      </button>)}
+    </div>
+    <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');@keyframes bspin{to{transform:rotate(360deg)}}@keyframes bpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.05)}}@keyframes bpop{0%{transform:scale(0);opacity:0}50%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}*{box-sizing:border-box;margin:0;padding:0}body{margin:0;background:${B.g200}}input:focus{border-color:${B.black}!important;box-shadow:0 0 0 3px rgba(0,0,0,0.06)}button:active{transform:scale(0.97)}::-webkit-scrollbar{width:0}`}</style>
+  </div>;
+}
+
+// ═══ RENDER ═══
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+  </script>
+</body>
+</html>
