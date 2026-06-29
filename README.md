@@ -65,6 +65,27 @@ igual; solo se deshabilitan el chat y la voz.
 
 ---
 
+## 🗄️ Replicar la base de datos en tu propio cluster
+
+¿No tienes acceso al cluster original o quieres montarlo desde cero en tu Atlas?
+La carpeta **[`db-setup/`](db-setup/)** trae todo lo necesario:
+
+- **Modelo de datos** (`DATA_MODEL.md`) — estructura de las 4 colecciones.
+- **Índices** — clásicos + Atlas Search + Vector Search (estos **no** vienen en un `mongodump`).
+- **Seed** — muestra real de datos (300 movimientos + métricas + DLQ), auto-cargable con `mongosh`.
+- **Stream Processors** — el pipeline ASP del flujo CDC en vivo (opcional, avanzado).
+
+```bash
+export MONGODB_ODL_URI="mongodb+srv://USUARIO:PASSWORD@tu-cluster.mongodb.net/"
+mongosh "$MONGODB_ODL_URI" db-setup/indexes/01-classic-indexes.js
+mongosh "$MONGODB_ODL_URI" db-setup/indexes/02-search-indexes.js
+mongosh "$MONGODB_ODL_URI" db-setup/seed/movimientos.seed.js
+mongosh "$MONGODB_ODL_URI" db-setup/seed/metricas_asp.seed.js
+mongosh "$MONGODB_ODL_URI" db-setup/seed/movimientos_dlq.seed.js
+```
+
+Detalle completo en [`db-setup/README.md`](db-setup/README.md).
+
 ## ⚙️ Simulador iSeries (opcional, avanzado)
 
 El simulador (`iseries-simulator/`) genera transacciones bancarias simuladas y las
