@@ -11,7 +11,7 @@ cp .env.example .env     # completar MONGODB_ODL_URI (mínimo)
 ./start.sh stop          # detiene ambos
 ```
 
-Guía completa para el usuario: **`SETUP.md`**.
+Guía completa para el usuario: **`README.md`**.
 
 ## Arquitectura
 
